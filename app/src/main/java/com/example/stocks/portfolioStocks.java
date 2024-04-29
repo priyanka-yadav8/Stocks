@@ -25,19 +25,19 @@ public class portfolioStocks {
         this.price = price;
     }
 
-    public float getChange() {
+    public double getChange() {
         return change;
     }
 
-    public void setChange(float change) {
+    public void setChange(double change) {
         this.change = change;
     }
 
-    public float getPercentageChange() {
+    public double getPercentageChange() {
         return percentageChange;
     }
 
-    public void setPercentageChange(float percentageChange) {
+    public void setPercentageChange(double percentageChange) {
         this.percentageChange = percentageChange;
     }
 
@@ -54,6 +54,6 @@ public class portfolioStocks {
     String name;
     int shares;
     double price;
-    float change;
-    float percentageChange;
+    double change;
+    double percentageChange;
 }

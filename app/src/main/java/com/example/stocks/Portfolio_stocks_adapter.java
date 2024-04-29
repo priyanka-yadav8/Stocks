@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -35,6 +36,7 @@ public class Portfolio_stocks_adapter extends RecyclerView.Adapter<Portfolio_sto
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
+        int pos = position;
         holder.tvPortfolioTicker.setText(arrayList.get(position).getTicker());
         if(flag==0){
             holder.tvPortfolioShares.setText(arrayList.get(position).getShares()+" shares");
@@ -43,9 +45,20 @@ public class Portfolio_stocks_adapter extends RecyclerView.Adapter<Portfolio_sto
             holder.tvPortfolioShares.setText(arrayList.get(position).getName());
 
         }
-        holder.tvPortfolioPrice.setText(arrayList.get(position).getPrice()+"");
+        holder.tvPortfolioPrice.setText("$"+arrayList.get(position).getPrice());
         holder.tvPortfolioChange.setText("$"+arrayList.get(position).getChange()+"( "+arrayList.get(position).getPercentageChange()+"% )");
+        holder.ivArrow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(context.getApplicationContext(), pos+"", Toast.LENGTH_SHORT).show();
 
+            }
+        });
+        if(arrayList.get(position).getChange()>=0){
+            holder.ivChangePort.setImageResource(R.drawable.trending_up);
+        } else{
+            holder.ivChangePort.setImageResource(R.drawable.trending_down);
+        }
     }
 
     @Override

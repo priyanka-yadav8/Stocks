@@ -39,6 +39,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,12 +65,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
     ArrayList<portfolioStocks> favourites_arraylist = new ArrayList<>();
 
 //    ArrayList<StockPeers> peers_arraylist = new ArrayList<>();
-
+    final DecimalFormat df = new DecimalFormat("0.00");
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+
 
         requestQueue = Volley.newRequestQueue(this);
 
@@ -131,15 +134,111 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
 
         rvPortfolio = (RecyclerView) findViewById(R.id.recyclerViewPortfolio);
-        createPorfolioArray();
-        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(this,portfolio_arraylist, 0);
-        rvPortfolio.setAdapter(portfolio_adapter);
-        rvPortfolio.setLayoutManager(new LinearLayoutManager(this));
+
+        //get portfolio request
+        String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-portfolio";
+        JsonObjectRequest getPortfolioRequest = new JsonObjectRequest(Request.Method.GET, getPortfolioUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject jsonObject) {
+                Log.d("portfolio", jsonObject.toString());
+                try {
+                    JSONArray responseArray = jsonObject.getJSONArray("portfolio");
+                    for(int i=0;i<responseArray.length();i++){
+                        portfolioStocks obj = new portfolioStocks();
+
+                        JSONObject jsonObject1 = responseArray.getJSONObject(i);
+                        int quantity = jsonObject1.getInt("quantity");
+                        Log.d("jsonn object",jsonObject1.toString());
+                        double cost_price = jsonObject1.getDouble("cost_price");
+                        String ticker = jsonObject1.getString("ticker");
+
+//                        portfolio_arraylist.add(obj);
+                        String getStockQuoteUrl = getString(R.string.gcp_url)+"api/stocks/get-stock-quote";
+                        JsonObjectRequest stockRequest = new JsonObjectRequest(Request.Method.POST, getStockQuoteUrl, null, new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject jsonObject) {
+                                try {
+                                    Log.d("stock-quote", jsonObject.toString());
+                                    double price = parseDouble(jsonObject.getString("last_price"));
+                                    double change = parseDouble(jsonObject.getString("change"));
+                                    double change_percentage = parseDouble(jsonObject.getString("change_percentage"));
+
+                                    Log.d("price-in-response", String.valueOf(price));
+                                    double market_value = price*quantity;
+                                    df.format(market_value);
+                                    obj.setPrice(market_value);
+                                    obj.setTicker(ticker);
+                                    obj.setShares(quantity);
+                                    double change_to_display = (price-cost_price)*quantity;
+                                    double total_cost_of_stock = cost_price*quantity;
+                                    double change_per_to_display = (change_to_display/total_cost_of_stock)*100;
+                                    //cuurentprice-costprice * quantity
+                                    df.format(change_to_display);
+                                    df.format(change_per_to_display);
+                                    obj.setChange(change_to_display);
+                                    obj.setPercentageChange(change_per_to_display);
+
+                                    Log.d("object-quote",String.valueOf(obj.getPrice()));
+                                    portfolio_arraylist.add(obj);
+                                    rvPortfolio.getAdapter().notifyItemInserted(portfolio_arraylist.size());
+//                                    Log.d("favrourites_array",String.valueOf(favourites_arraylist.get(i).getPrice()));
+
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError volleyError) {
+
+                            }
+                        }){
+                            @Override
+                            public String getBodyContentType() {
+                                return "application/json; charset=utf-8";
+                            }
+
+                            @Override
+                            public byte[] getBody() {
+                                JSONObject reqBody = new JSONObject();
+                                try {
+                                    reqBody.put("symbol", ticker);
+                                    return reqBody.toString().getBytes("utf-8");
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                } catch (UnsupportedEncodingException e) {
+                                    throw new RuntimeException(e);
+                                }
+
+                            }
+                        };
+                        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
+                        rvPortfolio.setAdapter(portfolio_adapter);
+                        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+                        requestQueue.add(stockRequest);
+
+                    }
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+
+
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+                Log.d("portfolio error",volleyError.toString());
+
+            }
+        });
+
+
+        requestQueue.add(getPortfolioRequest);
+
         ItemTouchHelper itemTouchHelperPortfolio = new ItemTouchHelper(simpleCallbackPortfolio);
         itemTouchHelperPortfolio.attachToRecyclerView(rvPortfolio);
 
         rvFavourites = (RecyclerView) findViewById(R.id.recyclerViewFavourites);
-
         String getWatchlistUrl = getString(R.string.gcp_url)+"api/watchlist/get-watchlist";
         JsonObjectRequest getWatchlistRequest = new JsonObjectRequest(Request.Method.GET, getWatchlistUrl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -161,17 +260,19 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                                 try {
                                     Log.d("stock-quote", jsonObject.toString());
                                     price[0] = parseDouble(jsonObject.getString("last_price"));
-//                                    float p = (float) price;
+                                    double change = parseDouble(jsonObject.getString("change"));
+                                    double change_percentage = parseDouble(jsonObject.getString("change_percentage"));
+
                                     Log.d("price-in-response", String.valueOf(price[0]));
                                     obj.setPrice(price[0]);
                                     obj.setTicker(ticker);
                                     obj.setName(name);
+                                    obj.setChange(change);
+                                    obj.setPercentageChange(change_percentage);
                                     Log.d("object-quote",String.valueOf(obj.getPrice()));
                                     favourites_arraylist.add(obj);
+                                    rvFavourites.getAdapter().notifyItemInserted(favourites_arraylist.size());
 //                                    Log.d("favrourites_array",String.valueOf(favourites_arraylist.get(i).getPrice()));
-                                    Portfolio_stocks_adapter favourites_adapter = new Portfolio_stocks_adapter(getApplicationContext(), favourites_arraylist, 1);
-                                    rvFavourites.setAdapter(favourites_adapter);
-                                    rvFavourites.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
                                 } catch (JSONException e) {
                                     throw new RuntimeException(e);
@@ -203,6 +304,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                             }
                         };
 
+                        Portfolio_stocks_adapter favourites_adapter = new Portfolio_stocks_adapter(getApplicationContext(), favourites_arraylist, 1);
+                        rvFavourites.setAdapter(favourites_adapter);
+                        rvFavourites.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
                         requestQueue.add(stockRequest);
 
@@ -304,42 +408,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 //            portfolio_arraylist.add(obj);
 //            favourites_arraylist.add(obj);
         }
-        //get portfolio request
-        String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-portfolio";
-        JsonObjectRequest getPortfolioRequest = new JsonObjectRequest(Request.Method.GET, getPortfolioUrl, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject jsonObject) {
-                Log.d("portfolio", jsonObject.toString());
-                try {
-                    JSONArray responseArray = jsonObject.getJSONArray("portfolio");
-                    for(int i=0;i<responseArray.length();i++){
-                        portfolioStocks obj = new portfolioStocks();
 
-                        JSONObject jsonObject1 = responseArray.getJSONObject(i);
-                        int quantity = jsonObject1.getInt("quantity");
-                        Log.d("jsonn object",jsonObject1.toString());
-                        int cost_price = jsonObject1.getInt("cost_price");
-                        obj.setShares(quantity);
-                        obj.setTicker(jsonObject1.getString("ticker"));
-                        portfolio_arraylist.add(obj);
-                        String getStockQuoteUrl = getString(R.string.gcp_url)+"api/stocks/get-stock-quote";
-                        rvPortfolio.getAdapter().notifyItemInserted(i);
-                    }
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-
-
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError volleyError) {
-                Log.d("portfolio error",volleyError.toString());
-
-            }
-        });
-
-        requestQueue.add(getPortfolioRequest);
 
         //get watchlist request
 
@@ -351,6 +420,5 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
     @Override
     public void onArrowClick(int position) {
-        Toast.makeText(MainActivity.this, position+"", Toast.LENGTH_SHORT).show();
     }
 }

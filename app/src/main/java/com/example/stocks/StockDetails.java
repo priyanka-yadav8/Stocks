@@ -8,11 +8,16 @@ import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
+import android.util.Log;
 import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,17 +28,31 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager.widget.ViewPager;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
+import com.google.android.material.tabs.TabLayout;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.w3c.dom.Text;
 
+import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 public class StockDetails extends AppCompatActivity implements NewsRVInterface, PeersRVInterface{
-
+    final DecimalFormat df = new DecimalFormat("#.00");
     ConstraintLayout stockInfo;
     TextView tvTicker, tvName, tvPrice, tvChange, tvSharesOwned, tvAvgCost, tvTotalCost, tvChangePortfolio, tvMarketValue, tvOpenPrice, tvLowPrice, tvHighPrice, tvPrevClose, tvIPO, tvIndustry, tvWebpage, tvPeers, tvTotalMSRP, tvTotalChange, tvPositiveMSRP, tvPositiveChange, tvNegativeMSRP, tvNegativeChange;
     ImageView ivChange;
@@ -61,6 +80,15 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
     ImageView ivNewsImage1;
     CardView cvFirstNews;
 
+    RequestQueue requestQueue;
+
+    String tickerGlobal = "AAPL";
+
+    WebView wvRecommendation;
+
+    TabLayout tabLayout;
+    ViewPager viewPager;
+
 
     ArrayList<StockNews> newsaArrayList = new ArrayList<>();
     ArrayList<StockPeers> peers_arraylist = new ArrayList<>();
@@ -71,6 +99,9 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_stock_details);
 
+        requestQueue = Volley.newRequestQueue(this);
+
+
         stockInfo = (ConstraintLayout) findViewById(R.id.viewStockInfo);
         tvTicker = (TextView) stockInfo.findViewById(R.id.textViewTicker);
         tvName = (TextView) stockInfo.findViewById(R.id.textViewName);
@@ -78,7 +109,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         tvChange = (TextView) stockInfo.findViewById(R.id.textViewChange);
         ivChange = (ImageView) stockInfo.findViewById(R.id.imageViewChange);
         ivCompanyIcon = (ImageView) stockInfo.findViewById(R.id.imageViewCompanyIcon);
-        Glide.with(this).load("https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/TSLA.png").into(ivCompanyIcon);
+//        Glide.with(this).load("https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/TSLA.png").into(ivCompanyIcon);
 
         tvSharesOwned = (TextView) findViewById(R.id.textViewSharesOwned);
         tvAvgCost = (TextView) findViewById(R.id.textViewAvgCost);
@@ -102,34 +133,239 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         tvNegativeMSRP = (TextView) findViewById(R.id.textViewNegativeMSRP);
         tvNegativeChange = (TextView) findViewById(R.id.textViewNegativeChange);
 
-        tvTicker.setText("AAPL");
-        tvName.setText("Apple Inc.");
-        tvChange.setText("$1.22(0.71%)");
-        tvPrice.setText("$172.58");
+        rvPeers = (RecyclerView) findViewById(R.id.recyclerViewPeers);
 
-        tvSharesOwned.setText("2");
-        tvAvgCost.setText("$176.25");
-        tvTotalCost.setText("$352.50");
-        tvChangePortfolio.setText("$-0.04");
+        //get portfolio request
+        String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-one-stock-portfolio/"+tickerGlobal;
+
+        JsonObjectRequest getPortfolioRequest = new JsonObjectRequest(Request.Method.GET, getPortfolioUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject jsonObject) {
+                try {
+                    tvSharesOwned.setText(jsonObject.getString("quantity"));
+                    tvAvgCost.setText(jsonObject.getString("cost_price"));
+
+                    double quantity = Double.parseDouble(jsonObject.getString("quantity"));
+                    double avgcost = Double.parseDouble(jsonObject.getString("cost_price"));
+                    double total_cost = quantity*avgcost;
+                    df.format(total_cost);
+                    tvTotalCost.setText(String.valueOf(total_cost));
+                    double current_price = Double.parseDouble(tvPrice.getText().toString());
+                    double change = current_price - avgcost;
+                    df.format(change);
+                    tvChangePortfolio.setText("$"+String.valueOf(change).substring(0,6));
+                    double market_value = current_price*quantity;
+                    tvMarketValue.setText("$"+String.valueOf(market_value));
+//                    String getStockQuoteUrl = getString(R.string.gcp_url)+"api/stocks/get-stock-quote";
+//                    JsonObjectRequest getStockQuoteRequest = new JsonObjectRequest(Request.Method.POST, getStockQuoteUrl, null, new Response.Listener<JSONObject>() {
+//                        @Override
+//                        public void onResponse(JSONObject jsonObject) {
+//                            double current
+//                        }
+//                    }, new Response.ErrorListener() {
+//                        @Override
+//                        public void onErrorResponse(VolleyError volleyError) {
+//
+//                        }
+//                    }){
+//
+//                        @Override
+//                        public String getBodyContentType() {
+//                            return "application/json; charset=utf-8";
+//                        }
+//
+//                        @Override
+//                        public byte[] getBody() {
+//                            JSONObject reqBody = new JSONObject();
+//                            try {
+//                                reqBody.put("symbol", tickerGlobal);
+//                                return reqBody.toString().getBytes("utf-8");
+//                            } catch (JSONException e) {
+//                                throw new RuntimeException(e);
+//                            } catch (UnsupportedEncodingException e) {
+//                                throw new RuntimeException(e);
+//                            }
+//                        }
+//                    };
+//                    requestQueue.add(getStockQuoteRequest);
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        });
+
+
+        //get stock details API
+        String getStockDetailsUrl = getString(R.string.gcp_url)+"api/stocks/get-stock-details";
+        JsonObjectRequest getStockDetailsRequest = new JsonObjectRequest(Request.Method.POST, getStockDetailsUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject jsonObject) {
+                try {
+                    JSONObject stock_details = jsonObject.getJSONObject("stock_details");
+                    Log.d("stock-data-get",stock_details.getString("ticker"));
+                    tvTicker.setText(stock_details.getString("ticker"));
+                    tvName.setText(stock_details.getString("name"));
+                    tvPrice.setText(stock_details.getString("last_price"));
+                    String change = stock_details.getString("change")+"("+stock_details.getString("change_percentage")+")";
+                    tvChange.setText(change);
+
+                    requestQueue.add(getPortfolioRequest);
+
+                    double changeCheck = Double.parseDouble(stock_details.getString("change"));
+                    if(changeCheck>=0){
+                        ivChange.setImageResource(R.drawable.trending_up);
+                    } else {
+                        ivChange.setImageResource(R.drawable.trending_down);
+
+                    }
+                    Glide.with(getApplicationContext()).load(stock_details.getString("logo")).into(ivCompanyIcon);
+
+                    JSONObject summary = jsonObject.getJSONObject("summary");
+                    tvHighPrice.setText(summary.getString("high_price"));
+                    tvLowPrice.setText(summary.getString("low_price"));
+                    tvOpenPrice.setText(summary.getString("open_price"));
+                    tvPrevClose.setText(summary.getString("prev_close"));
+
+                    JSONObject company_details = jsonObject.getJSONObject("company_details");
+                    tvIPO.setText(company_details.getString("ipo_start_date"));
+                    tvIndustry.setText(company_details.getString("industry"));
+                    String htmlWeb = company_details.getString("webpage");
+                    tvWebpage.setText(Html.fromHtml(htmlWeb, Html.FROM_HTML_MODE_COMPACT));
+
+                    JSONArray peers = company_details.getJSONArray("company_peers");
+                    for(int i=0;i<peers.length();i++){
+                        StockPeers obj = new StockPeers();
+                        obj.setPeer(peers.getString(i));
+                        peers_arraylist.add(obj);
+                        rvPeers.getAdapter().notifyItemInserted(peers_arraylist.size());
+
+                    }
+
+
+
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        }){
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() {
+                JSONObject reqBody = new JSONObject();
+                try {
+                    reqBody.put("symbol", tickerGlobal);
+                    return reqBody.toString().getBytes("utf-8");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        requestQueue.add(getStockDetailsRequest);
+
+        String getInsightsUrl = getString(R.string.gcp_url)+"api/stocks/get-insights";
+        JsonObjectRequest getInsightsRequest = new JsonObjectRequest(Request.Method.POST, getInsightsUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject jsonObject) {
+                try {
+                    JSONObject insider_sentiments = jsonObject.getJSONObject("insider_sentiments");
+//                    tvTotalMSRP.setText("-100.00");
+//                    tvTotalChange.setText("-2765634.0");
+//                    tvPositiveMSRP.setText("200.0");
+//                    tvPositiveChange.setText("8764522.0");
+//                    tvNegativeMSRP.setText("-854.26");
+//                    tvNegativeChange.setText("-3540118.0");
+                    tvTotalMSRP.setText(insider_sentiments.getString("total_mspr"));
+                    tvPositiveMSRP.setText(insider_sentiments.getString("positive_mspr"));
+                    tvNegativeMSRP.setText(insider_sentiments.getString("negative_mspr"));
+                    tvTotalChange.setText(insider_sentiments.getString("total_change"));
+                    tvPositiveChange.setText(insider_sentiments.getString("positive_change"));
+                    tvNegativeChange.setText(insider_sentiments.getString("negative_change"));
+
+
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        }){
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+
+            }
+
+            @Override
+            public byte[] getBody() {
+                JSONObject reqBody = new JSONObject();
+                try {
+                    reqBody.put("symbol", tickerGlobal);
+                    return reqBody.toString().getBytes("utf-8");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        requestQueue.add(getInsightsRequest);
+
+//        tvTicker.setText("AAPL");
+//        tvName.setText("Apple Inc.");
+//        tvChange.setText("$1.22(0.71%)");
+//        tvPrice.setText("$172.58");
+
+
+
+
+
+
+//        tvSharesOwned.setText("2");
+//        tvAvgCost.setText("$176.25");
+//        tvTotalCost.setText("$352.50");
+//        tvChangePortfolio.setText("$-0.04");
 
         tvMarketValue.setText("$352.46");
 
-        tvOpenPrice.setText("$171.65");
-        tvLowPrice.setText("$170.06");
-        tvHighPrice.setText("$172.94");
-        tvPrevClose.setText("$171.37");
+//        tvOpenPrice.setText("$171.65");
+//        tvLowPrice.setText("$170.06");
+//        tvHighPrice.setText("$172.94");
+//        tvPrevClose.setText("$171.37");
 
-        tvIPO.setText("12-11-1980");
-        tvIndustry.setText("Technology");
-        tvWebpage.setText(Html.fromHtml(htmlStr, Html.FROM_HTML_MODE_COMPACT));
+//        tvIPO.setText("12-11-1980");
+//        tvIndustry.setText("Technology");
 //        tvPeers.setText("AAPL, DELL, AAPL, SMCI");
 
-        tvTotalMSRP.setText("-100.00");
-        tvTotalChange.setText("-2765634.0");
-        tvPositiveMSRP.setText("200.0");
-        tvPositiveChange.setText("8764522.0");
-        tvNegativeMSRP.setText("-854.26");
-        tvNegativeChange.setText("-3540118.0");
+//        tvTotalMSRP.setText("-100.00");
+//        tvTotalChange.setText("-2765634.0");
+//        tvPositiveMSRP.setText("200.0");
+//        tvPositiveChange.setText("8764522.0");
+//        tvNegativeMSRP.setText("-854.26");
+//        tvNegativeChange.setText("-3540118.0");
 
         rvNews = (RecyclerView) findViewById(R.id.recyclerViewNews);
         createNewsArray();
@@ -236,11 +472,28 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
             }
         });
 
-        rvPeers = (RecyclerView) findViewById(R.id.recyclerViewPeers);
-        createPeersList();
+//        createPeersList();
         Peers_adapter peers_adapter = new Peers_adapter(this,peers_arraylist, this);
         rvPeers.setAdapter(peers_adapter);
         rvPeers.setLayoutManager(new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false));
+
+
+        wvRecommendation = (WebView) findViewById(R.id.webViewRecommendationChart);
+        wvRecommendation.getSettings().setJavaScriptEnabled(true);
+        wvRecommendation.setWebViewClient(new WebViewClient());
+        wvRecommendation.loadUrl("file:///android_asset/RecommendationChart.html");
+        WebSettings objWeb = wvRecommendation.getSettings();
+        objWeb.setAllowUniversalAccessFromFileURLs(true);
+
+        tabLayout = (TabLayout) findViewById(R.id.tabLayout);
+        viewPager = (ViewPager) findViewById(R.id.viewPager);
+        tabLayout.setupWithViewPager(viewPager);
+        Fragment_adapter fragmentAdapter = new Fragment_adapter(getSupportFragmentManager(), FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+        fragmentAdapter.addToFragment(new HourlyPriceChartFragment());
+        fragmentAdapter.addToFragment(new HistoricalChartFragment());
+        viewPager.setAdapter(fragmentAdapter);
+        tabLayout.getTabAt(0).setIcon(R.drawable.chart_hour);
+        tabLayout.getTabAt(1).setIcon(R.drawable.chart_historical);
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
