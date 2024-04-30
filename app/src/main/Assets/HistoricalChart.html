@@ -8,17 +8,18 @@
     <script src="https://code.highcharts.com/stock/indicators/indicators-all.js"></script>
     <script src="https://code.highcharts.com/stock/indicators/volume-by-price.js"></script>
     <style>
-      #container { 
-          width: 350px; 
-          margin: 0 auto; 
+      #container {
+          width: 350px;
+          margin: 0 auto;
       }
   </style>
 </head>
 <body>
     <div id="container"></div>
     <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            const apiEndpoint = 'http://18.188.135.207/api/historical/AAPL';
+        function loadChartData(companyTicker) {
+            const apiEndpoint = `http://18.188.135.207/api/historical/${companyTicker}`;
+
 
             fetch(apiEndpoint)
                 .then(response => response.json())
@@ -31,20 +32,24 @@
                         item.c  // close
                     ]);
 
+
                     const volume = data.results.map(item => [
                         item.t, // time
                         item.v  // volume
                     ]);
 
-                    const symbol = 'AAPL'; // Replace with your symbol variable
+
+                    const symbol = companyTicker; // Replace with your symbol variable
+
 
                     Highcharts.stockChart('container', {
                         chart: {
                             height: 400, // or whatever height you prefer
-                            
+                           
                         },
                         rangeSelector: {
-                            selected: 2
+                            selected: 2,
+                           
                         },
                         title: {
                             text: symbol + ' Historical'
@@ -111,7 +116,7 @@
                     });
                 })
                 .catch(error => console.error('Error fetching data:', error));
-        });
+        };
     </script>
 </body>
 </html>

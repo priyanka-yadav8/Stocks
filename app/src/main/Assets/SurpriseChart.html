@@ -11,8 +11,9 @@
 <body>
     <div id="container"></div>
     <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            const apiEndpoint = 'http://18.188.135.207/api/earnings/AAPL';
+        function loadChartData(ticker) {
+            const apiEndpoint = `http://18.188.135.207/api/earnings/${ticker}`;
+
 
             fetch(apiEndpoint)
                 .then(response => response.json())
@@ -23,9 +24,11 @@
                     const earningPeriod = data.map(item => item.period);
                     const earningSurprise = data.map(item => item.surprise);
 
+
                     var combinedCategories = earningPeriod.map(function(period, index) {
                         return period + '<br> Surprise: ' + earningSurprise[index];
                     });
+
 
                     var earningChart = {
                         chart: {
@@ -37,7 +40,7 @@
                             align: 'center'
                         },
                         xAxis: {
-                            categories: combinedCategories, 
+                            categories: combinedCategories,
                             title: {
                                 text: ''
                             },
@@ -58,15 +61,16 @@
                             data: earningActual
                         }, {
                             name: 'Estimate',
-                            data: earningEstimate 
+                            data: earningEstimate
                         }]
                     };
+
 
                     // Render the chart using Highcharts
                     Highcharts.chart('container', earningChart);
                 })
                 .catch(error => console.error('Error fetching data:', error));
-        });
+        };
     </script>
 </body>
 </html>

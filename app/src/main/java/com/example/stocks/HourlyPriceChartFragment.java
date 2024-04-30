@@ -16,8 +16,12 @@ public class HourlyPriceChartFragment extends Fragment {
 
 
     private WebView webView;
-    public HourlyPriceChartFragment() {
+    int color;
+    String ticker;
+    public HourlyPriceChartFragment(String ticker, int color) {
         // Required empty public constructor
+        this.ticker = ticker;
+        this.color = color;
     }
 
 
@@ -33,6 +37,13 @@ public class HourlyPriceChartFragment extends Fragment {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new WebViewClient());
         webView.loadUrl("file:///android_asset/HourlyPrice.html");
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                webView.evaluateJavascript("javascript:loadChartData('" + ticker + "','" + color + "')", null);
+            }
+        });
         WebSettings objWeb = webView.getSettings();
         objWeb.setAllowUniversalAccessFromFileURLs(true);
         return view;

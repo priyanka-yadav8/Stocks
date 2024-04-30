@@ -1,6 +1,7 @@
 package com.example.stocks;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,8 +57,11 @@ public class Portfolio_stocks_adapter extends RecyclerView.Adapter<Portfolio_sto
         });
         if(arrayList.get(position).getChange()>=0){
             holder.ivChangePort.setImageResource(R.drawable.trending_up);
+            holder.tvPortfolioChange.setTextColor(Color.parseColor("#00A300"));
         } else{
             holder.ivChangePort.setImageResource(R.drawable.trending_down);
+            holder.tvPortfolioChange.setTextColor(Color.parseColor("#D10000"));
+
         }
     }
 

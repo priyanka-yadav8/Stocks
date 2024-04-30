@@ -9,6 +9,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -21,7 +23,11 @@ import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.widget.Toolbar;
+
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -37,6 +43,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
@@ -50,11 +57,14 @@ import org.w3c.dom.Text;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class StockDetails extends AppCompatActivity implements NewsRVInterface, PeersRVInterface{
     final DecimalFormat df = new DecimalFormat("#.00");
+    Toolbar toolbar;
+    ActionBar actionBar;
     ConstraintLayout stockInfo;
-    TextView tvTicker, tvName, tvPrice, tvChange, tvSharesOwned, tvAvgCost, tvTotalCost, tvChangePortfolio, tvMarketValue, tvOpenPrice, tvLowPrice, tvHighPrice, tvPrevClose, tvIPO, tvIndustry, tvWebpage, tvPeers, tvTotalMSRP, tvTotalChange, tvPositiveMSRP, tvPositiveChange, tvNegativeMSRP, tvNegativeChange;
+    TextView tvTicker, tvName, tvPrice, tvChange, tvSharesOwned, tvAvgCost, tvTotalCost, tvChangePortfolio, tvMarketValue, tvOpenPrice, tvLowPrice, tvHighPrice, tvPrevClose, tvIPO, tvIndustry, tvWebpage, tvPeers, tvTotalMSRP, tvTotalChange, tvPositiveMSRP, tvPositiveChange, tvNegativeMSRP, tvNegativeChange, textViewTableName;
     ImageView ivChange;
     ImageView ivCompanyIcon;
 
@@ -82,12 +92,13 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 
     RequestQueue requestQueue;
 
-    String tickerGlobal = "AAPL";
+    String tickerGlobal = "DDOG";
 
-    WebView wvRecommendation;
+    WebView wvRecommendation, wvSurprise;
 
     TabLayout tabLayout;
     ViewPager viewPager;
+    int color;
 
 
     ArrayList<StockNews> newsaArrayList = new ArrayList<>();
@@ -101,6 +112,11 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 
         requestQueue = Volley.newRequestQueue(this);
 
+        toolbar = (Toolbar) findViewById(R.id.toolbar2);
+        setSupportActionBar(toolbar);
+        actionBar = getSupportActionBar();
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setTitle(tickerGlobal);
 
         stockInfo = (ConstraintLayout) findViewById(R.id.viewStockInfo);
         tvTicker = (TextView) stockInfo.findViewById(R.id.textViewTicker);
@@ -132,6 +148,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         tvPositiveChange = (TextView) findViewById(R.id.textViewPositiveChange);
         tvNegativeMSRP = (TextView) findViewById(R.id.textViewNegativeMSRP);
         tvNegativeChange = (TextView) findViewById(R.id.textViewNegativeChange);
+        textViewTableName = (TextView) findViewById(R.id.textViewTableName);
 
         rvPeers = (RecyclerView) findViewById(R.id.recyclerViewPeers);
 
@@ -153,41 +170,9 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                     double current_price = Double.parseDouble(tvPrice.getText().toString());
                     double change = current_price - avgcost;
                     df.format(change);
-                    tvChangePortfolio.setText("$"+String.valueOf(change).substring(0,6));
+                    tvChangePortfolio.setText("$"+String.valueOf(change).substring(0,5));
                     double market_value = current_price*quantity;
                     tvMarketValue.setText("$"+String.valueOf(market_value));
-//                    String getStockQuoteUrl = getString(R.string.gcp_url)+"api/stocks/get-stock-quote";
-//                    JsonObjectRequest getStockQuoteRequest = new JsonObjectRequest(Request.Method.POST, getStockQuoteUrl, null, new Response.Listener<JSONObject>() {
-//                        @Override
-//                        public void onResponse(JSONObject jsonObject) {
-//                            double current
-//                        }
-//                    }, new Response.ErrorListener() {
-//                        @Override
-//                        public void onErrorResponse(VolleyError volleyError) {
-//
-//                        }
-//                    }){
-//
-//                        @Override
-//                        public String getBodyContentType() {
-//                            return "application/json; charset=utf-8";
-//                        }
-//
-//                        @Override
-//                        public byte[] getBody() {
-//                            JSONObject reqBody = new JSONObject();
-//                            try {
-//                                reqBody.put("symbol", tickerGlobal);
-//                                return reqBody.toString().getBytes("utf-8");
-//                            } catch (JSONException e) {
-//                                throw new RuntimeException(e);
-//                            } catch (UnsupportedEncodingException e) {
-//                                throw new RuntimeException(e);
-//                            }
-//                        }
-//                    };
-//                    requestQueue.add(getStockQuoteRequest);
 
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
@@ -211,17 +196,35 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                     Log.d("stock-data-get",stock_details.getString("ticker"));
                     tvTicker.setText(stock_details.getString("ticker"));
                     tvName.setText(stock_details.getString("name"));
+                    textViewTableName.setText(stock_details.getString("name"));
                     tvPrice.setText(stock_details.getString("last_price"));
                     String change = stock_details.getString("change")+"("+stock_details.getString("change_percentage")+")";
                     tvChange.setText(change);
+                    if(Double.parseDouble(stock_details.getString("change"))>=0){
+                        color =1;
+                    } else {
+                        color =0;
+                    }
+                    tabLayout = (TabLayout) findViewById(R.id.tabLayout);
+                    viewPager = (ViewPager) findViewById(R.id.viewPager);
+                    tabLayout.setupWithViewPager(viewPager);
+                    Fragment_adapter fragmentAdapter = new Fragment_adapter(getSupportFragmentManager(), FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+                    fragmentAdapter.addToFragment(new HourlyPriceChartFragment(tickerGlobal, color));
+                    fragmentAdapter.addToFragment(new HistoricalChartFragment(tickerGlobal));
+                    viewPager.setAdapter(fragmentAdapter);
+                    tabLayout.getTabAt(0).setIcon(R.drawable.chart_hour);
+                    tabLayout.getTabAt(1).setIcon(R.drawable.chart_historical);
 
                     requestQueue.add(getPortfolioRequest);
 
                     double changeCheck = Double.parseDouble(stock_details.getString("change"));
                     if(changeCheck>=0){
                         ivChange.setImageResource(R.drawable.trending_up);
+                        tvChange.setTextColor(Color.parseColor("#00A300"));
+
                     } else {
                         ivChange.setImageResource(R.drawable.trending_down);
+                        tvChange.setTextColor(Color.parseColor("#D10000"));
 
                     }
                     Glide.with(getApplicationContext()).load(stock_details.getString("logo")).into(ivCompanyIcon);
@@ -287,12 +290,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
             public void onResponse(JSONObject jsonObject) {
                 try {
                     JSONObject insider_sentiments = jsonObject.getJSONObject("insider_sentiments");
-//                    tvTotalMSRP.setText("-100.00");
-//                    tvTotalChange.setText("-2765634.0");
-//                    tvPositiveMSRP.setText("200.0");
-//                    tvPositiveChange.setText("8764522.0");
-//                    tvNegativeMSRP.setText("-854.26");
-//                    tvNegativeChange.setText("-3540118.0");
+
                     tvTotalMSRP.setText(insider_sentiments.getString("total_mspr"));
                     tvPositiveMSRP.setText(insider_sentiments.getString("positive_mspr"));
                     tvNegativeMSRP.setText(insider_sentiments.getString("negative_mspr"));
@@ -349,7 +347,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 //        tvTotalCost.setText("$352.50");
 //        tvChangePortfolio.setText("$-0.04");
 
-        tvMarketValue.setText("$352.46");
+//        tvMarketValue.setText("$352.46");
 
 //        tvOpenPrice.setText("$171.65");
 //        tvLowPrice.setText("$170.06");
@@ -367,11 +365,105 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 //        tvNegativeMSRP.setText("-854.26");
 //        tvNegativeChange.setText("-3540118.0");
 
+
+
         rvNews = (RecyclerView) findViewById(R.id.recyclerViewNews);
-        createNewsArray();
+//        createNewsArray();
+//        StockNews obj = new StockNews();
+//        obj.setSource("Yahoo"+i);
+//        obj.setTime("5");
+//        obj.setNewsDate("25 April, 2024");
+//        obj.setHeadline("Hello blah blah blah");
+//        obj.setImageUrl("https://www.macworld.com/wp-content/uploads/2023/12/apple-wonderlust-event-no-words-iphone-15-1.jpg?quality=50&strip=all");
+//        obj.setDesc("This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.");
+//        newsaArrayList.add(obj);
+
+        String getNewsUrl = getString(R.string.gcp_url)+"api/stocks/get-company-news";
+        JsonArrayRequest getNewsRequest = new JsonArrayRequest(Request.Method.POST, getNewsUrl, null, new Response.Listener<JSONArray>() {
+            @Override
+            public void onResponse(JSONArray jsonArray) {
+                for(int i=0;i<jsonArray.length();i++){
+                    StockNews obj = new StockNews();
+                    try {
+                        JSONObject newsObj = jsonArray.getJSONObject(i);
+                        obj.setSource(newsObj.getString("source"));
+                        obj.setNewsDate(newsObj.getString("datetime"));
+                        obj.setHeadline(newsObj.getString("headline"));
+                        obj.setDesc(newsObj.getString("summary"));
+                        obj.setImageUrl(newsObj.getString("image"));
+                        obj.setUrl(newsObj.getString("url"));
+                        Random rand = new Random();
+
+                        // Generate random integers in range 0 to 999
+                        int rand_int1 = rand.nextInt(5);
+                        obj.setTime(rand_int1+i+"");
+                        newsaArrayList.add(obj);
+                        rvNews.getAdapter().notifyItemInserted(newsaArrayList.size());
+
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                cvFirstNews = (CardView) findViewById(R.id.viewFirstNews);
+
+                tvSource1 = (TextView) findViewById(R.id.textViewNewsSource);
+                tvTime1 = (TextView) findViewById(R.id.textViewNewsHours);
+                tvHeadline1 = (TextView) findViewById(R.id.textViewNewsTitle);
+                ivNewsImage1 = (ImageView) findViewById(R.id.imageViewNewsImage);
+
+                tvSource1.setText(newsaArrayList.get(0).getSource());
+                tvTime1.setText(newsaArrayList.get(0).getTime()+" hours ago");
+                tvHeadline1.setText(newsaArrayList.get(0).getHeadline());
+                Glide.with(getApplicationContext())
+                        .load(newsaArrayList.get(0).getImageUrl())
+                        .into(ivNewsImage1);
+                removedNews = newsaArrayList.get(0);
+                newsaArrayList.remove(0);
+                cvFirstNews.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        tvSource.setText(removedNews.getSource());
+                        tvDate.setText(removedNews.getNewsDate());
+                        tvHeadline.setText(removedNews.getHeadline());
+                        tvDesc.setText(removedNews.getDesc());
+                        tvDate.setText(removedNews.getNewsDate());
+                        newsDialog.show();
+                    }
+                });
+
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+
+            }
+        }){
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() {
+                JSONObject reqBody = new JSONObject();
+                try {
+                    reqBody.put("symbol", tickerGlobal);
+                    return reqBody.toString().getBytes("utf-8");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+
         News_adapter news_adapter = new News_adapter(this, newsaArrayList, this);
         rvNews.setAdapter(news_adapter);
         rvNews.setLayoutManager(new LinearLayoutManager(this));
+        requestQueue.add(getNewsRequest);
+
 
         buttonTrade = (Button) findViewById(R.id.buttonTrade);
         buttonTrade.setBackgroundColor(Color.parseColor("#0fa028"));
@@ -445,32 +537,32 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         buttonDone.setBackgroundColor(Color.parseColor("#0fa028"));
 //        First News Card
 
-        cvFirstNews = (CardView) findViewById(R.id.viewFirstNews);
-
-        tvSource1 = (TextView) findViewById(R.id.textViewNewsSource);
-        tvTime1 = (TextView) findViewById(R.id.textViewNewsHours);
-        tvHeadline1 = (TextView) findViewById(R.id.textViewNewsTitle);
-        ivNewsImage1 = (ImageView) findViewById(R.id.imageViewNewsImage);
-
-        tvSource1.setText(newsaArrayList.get(0).getSource());
-        tvTime1.setText(newsaArrayList.get(0).getTime());
-        tvHeadline1.setText(newsaArrayList.get(0).getHeadline());
-        Glide.with(this)
-                .load(newsaArrayList.get(0).getImageUrl())
-                .into(ivNewsImage1);
-        removedNews = newsaArrayList.get(0);
-        newsaArrayList.remove(0);
-        cvFirstNews.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                tvSource.setText(removedNews.getSource());
-                tvDate.setText(removedNews.getNewsDate());
-                tvHeadline.setText(removedNews.getHeadline());
-                tvDesc.setText(removedNews.getDesc());
-                tvDate.setText(removedNews.getNewsDate());
-                newsDialog.show();
-            }
-        });
+//        cvFirstNews = (CardView) findViewById(R.id.viewFirstNews);
+//
+//        tvSource1 = (TextView) findViewById(R.id.textViewNewsSource);
+//        tvTime1 = (TextView) findViewById(R.id.textViewNewsHours);
+//        tvHeadline1 = (TextView) findViewById(R.id.textViewNewsTitle);
+//        ivNewsImage1 = (ImageView) findViewById(R.id.imageViewNewsImage);
+//
+//        tvSource1.setText(newsaArrayList.get(0).getSource());
+//        tvTime1.setText(newsaArrayList.get(0).getTime());
+//        tvHeadline1.setText(newsaArrayList.get(0).getHeadline());
+//        Glide.with(this)
+//                .load(newsaArrayList.get(0).getImageUrl())
+//                .into(ivNewsImage1);
+//        removedNews = newsaArrayList.get(0);
+//        newsaArrayList.remove(0);
+//        cvFirstNews.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                tvSource.setText(removedNews.getSource());
+//                tvDate.setText(removedNews.getNewsDate());
+//                tvHeadline.setText(removedNews.getHeadline());
+//                tvDesc.setText(removedNews.getDesc());
+//                tvDate.setText(removedNews.getNewsDate());
+//                newsDialog.show();
+//            }
+//        });
 
 //        createPeersList();
         Peers_adapter peers_adapter = new Peers_adapter(this,peers_arraylist, this);
@@ -482,18 +574,39 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         wvRecommendation.getSettings().setJavaScriptEnabled(true);
         wvRecommendation.setWebViewClient(new WebViewClient());
         wvRecommendation.loadUrl("file:///android_asset/RecommendationChart.html");
+        wvRecommendation.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                wvRecommendation.evaluateJavascript("javascript:loadChartData('" + tickerGlobal + "')", null);
+            }
+        });
         WebSettings objWeb = wvRecommendation.getSettings();
         objWeb.setAllowUniversalAccessFromFileURLs(true);
 
-        tabLayout = (TabLayout) findViewById(R.id.tabLayout);
-        viewPager = (ViewPager) findViewById(R.id.viewPager);
-        tabLayout.setupWithViewPager(viewPager);
-        Fragment_adapter fragmentAdapter = new Fragment_adapter(getSupportFragmentManager(), FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
-        fragmentAdapter.addToFragment(new HourlyPriceChartFragment());
-        fragmentAdapter.addToFragment(new HistoricalChartFragment());
-        viewPager.setAdapter(fragmentAdapter);
-        tabLayout.getTabAt(0).setIcon(R.drawable.chart_hour);
-        tabLayout.getTabAt(1).setIcon(R.drawable.chart_historical);
+        wvSurprise = (WebView) findViewById(R.id.webViewSurpriseChart);
+        wvSurprise.getSettings().setJavaScriptEnabled(true);
+        wvSurprise.setWebViewClient(new WebViewClient());
+        wvSurprise.loadUrl("file:///android_asset/SurpriseChart.html");
+        wvSurprise.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                wvSurprise.evaluateJavascript("javascript:loadChartData('" + tickerGlobal + "')", null);
+            }
+        });
+        WebSettings objWeb2 = wvSurprise.getSettings();
+        objWeb2.setAllowUniversalAccessFromFileURLs(true);
+
+//        tabLayout = (TabLayout) findViewById(R.id.tabLayout);
+//        viewPager = (ViewPager) findViewById(R.id.viewPager);
+//        tabLayout.setupWithViewPager(viewPager);
+//        Fragment_adapter fragmentAdapter = new Fragment_adapter(getSupportFragmentManager(), FragmentPagerAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+//        fragmentAdapter.addToFragment(new HourlyPriceChartFragment(tickerGlobal, color));
+//        fragmentAdapter.addToFragment(new HistoricalChartFragment(tickerGlobal));
+//        viewPager.setAdapter(fragmentAdapter);
+//        tabLayout.getTabAt(0).setIcon(R.drawable.chart_hour);
+//        tabLayout.getTabAt(1).setIcon(R.drawable.chart_historical);
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -507,14 +620,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 
     public void createNewsArray(){
         for(int i = 0; i<5;i++){
-            StockNews obj = new StockNews();
-            obj.setSource("Yahoo"+i);
-            obj.setTime("5");
-            obj.setNewsDate("25 April, 2024");
-            obj.setHeadline("Hello blah blah blah");
-            obj.setImageUrl("https://www.macworld.com/wp-content/uploads/2023/12/apple-wonderlust-event-no-words-iphone-15-1.jpg?quality=50&strip=all");
-            obj.setDesc("This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.This is the description of the news.");
-            newsaArrayList.add(obj);
+
         }
     };
 
@@ -525,6 +631,26 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
             peers_arraylist.add(obj);
         }
     };
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.stocks_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.infoStar){
+            item.setIcon(R.drawable.full_star);
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        super.finish();
+        return super.onSupportNavigateUp();
+    }
 
     //tvSource, tvDate, tvHeadline, tvDesc
     @Override

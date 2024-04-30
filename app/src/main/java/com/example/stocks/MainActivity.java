@@ -8,15 +8,20 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import androidx.appcompat.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.Toolbar;
 
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
@@ -52,6 +57,9 @@ import it.xabaras.android.recyclerview.swipedecorator.RecyclerViewSwipeDecorator
 public class MainActivity extends AppCompatActivity implements StockArrowInterface{
 
     RequestQueue requestQueue;
+
+    Toolbar toolbar;
+    ActionBar actionBar;
     double wallet;
     TextView tvPortfolio, tvWorth, tvBalance, tvFavs, tvFooter;
     EditText etDate;
@@ -72,6 +80,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        actionBar = getSupportActionBar();
 
 
         requestQueue = Volley.newRequestQueue(this);
@@ -170,13 +181,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                                     obj.setTicker(ticker);
                                     obj.setShares(quantity);
                                     double change_to_display = (price-cost_price)*quantity;
+
                                     double total_cost_of_stock = cost_price*quantity;
                                     double change_per_to_display = (change_to_display/total_cost_of_stock)*100;
                                     //cuurentprice-costprice * quantity
                                     df.format(change_to_display);
                                     df.format(change_per_to_display);
-                                    obj.setChange(change_to_display);
-                                    obj.setPercentageChange(change_per_to_display);
+                                    obj.setChange(Double.parseDouble(String.format("%.2f", change_to_display)));
+                                    obj.setPercentageChange(Double.parseDouble(String.format("%.2f", change_per_to_display)));
 
                                     Log.d("object-quote",String.valueOf(obj.getPrice()));
                                     portfolio_arraylist.add(obj);
@@ -212,9 +224,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
                             }
                         };
-                        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
-                        rvPortfolio.setAdapter(portfolio_adapter);
-                        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+//                        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
+//                        rvPortfolio.setAdapter(portfolio_adapter);
+//                        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
                         requestQueue.add(stockRequest);
 
                     }
@@ -232,6 +244,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
             }
         });
 
+        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
+        rvPortfolio.setAdapter(portfolio_adapter);
+        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
         requestQueue.add(getPortfolioRequest);
 
@@ -396,27 +411,38 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         }
     };
 
-    public void createPorfolioArray(){
-        for(int i = 0; i<2;i++){
-            portfolioStocks obj = new portfolioStocks();
-            obj.setTicker("AAPL");
-            obj.setPrice(123.00F);
-            obj.setShares(12);
-            obj.setChange(567.98F);
-            obj.setName("Apple Inc.");
-
-//            portfolio_arraylist.add(obj);
-//            favourites_arraylist.add(obj);
-        }
 
 
-        //get watchlist request
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu,menu);
+        MenuItem menuItem = menu.findItem(R.id.searchBar);
+        SearchView searchView = (SearchView) menuItem.getActionView();
+        searchView.setQueryHint("Search...");
 
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        return super.onCreateOptionsMenu(menu);
     }
 
-
-
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId()==android.R.id.home){
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     @Override
     public void onArrowClick(int position) {

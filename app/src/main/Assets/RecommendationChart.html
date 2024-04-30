@@ -11,10 +11,12 @@
 <body>
 <div id="container"></div>
 <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
-        fetch('http://18.188.135.207/api/recommendation/AAPL')
+    function loadChartData(ticker) {
+        const apiUrl = `http://18.188.135.207/api/recommendation/${ticker}`;
+        fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
+               
                 const categories = data.map(item => item.period);
                 const strongBuy = data.map(item => item.strongBuy);
                 const buy = data.map(item => item.buy);
@@ -22,13 +24,14 @@
                 const sell = data.map(item => item.sell);
                 const strongSell = data.map(item => item.strongSell);
 
+
                 Highcharts.chart('container', {
                     chart: {
                         type: 'column',
-
+                        height: 400
                     },
                     title: {
-                        text: 'AAPL Recommendation Trends'
+                        text: `${ticker} Recommendation Trends`
                     },
                     xAxis: {
                         categories: categories
@@ -43,6 +46,7 @@
                         }
                     },
 
+
                     tooltip: {
                         headerFormat: '<b>{point.x}</b><br/>',
                         pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
@@ -56,35 +60,16 @@
                         }
                     },
                     series: [
-                        {
-                            name: 'Strong Buy',
-                            data: strongBuy,
-                            color: '#146e37'
-                        },
-                        {
-                            name: 'Buy',
-                            data: buy,
-                            color: '#19b950'
-                        },
-                        {
-                            name: 'Hold',
-                            data: hold,
-                            color: '#b98719'
-                        },
-                        {
-                            name: 'Sell',
-                            data: sell,
-                            color: '#f05a5a'
-                        },
-                        {
-                            name: 'Strong Sell',
-                            data: strongSell,
-                            color: '#7d2d2d'
-                        }
+                        { name: 'Strong Buy', data: strongBuy, color: '#146e37' },
+                        { name: 'Buy', data: buy, color: '#19b950' },
+                        { name: 'Hold', data: hold, color: '#b98719' },
+                        { name: 'Sell', data: sell, color: '#f05a5a' },
+                        { name: 'Strong Sell', data: strongSell, color: '#7d2d2d' }
                     ]
                 });
             })
             .catch(error => console.error('Error fetching data:', error));
-    });
+    }
 </script>
 </body>
+</html>

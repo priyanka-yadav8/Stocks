@@ -16,9 +16,11 @@ import android.webkit.WebViewClient;
 public class HistoricalChartFragment extends Fragment {
 
    private WebView webView;
+   String ticker;
 
-    public HistoricalChartFragment() {
+    public HistoricalChartFragment(String ticker) {
         // Required empty public constructor
+        this.ticker=ticker;
     }
 
 
@@ -40,6 +42,15 @@ public class HistoricalChartFragment extends Fragment {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new WebViewClient());
         webView.loadUrl("file:///android_asset/HistoricalChart.html");
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                webView.evaluateJavascript("javascript:loadChartData('" + ticker + "')", null);
+            }
+        });
+
+
         WebSettings objWeb = webView.getSettings();
         objWeb.setAllowUniversalAccessFromFileURLs(true);
         return view;
