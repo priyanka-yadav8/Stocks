@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
+    app:cardCornerRadius="30dp"
     android:layout_height="400dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -12,9 +13,12 @@
 
         <TextView
             android:id="@+id/textViewTradeDialogTitle"
-            android:layout_width="164dp"
-            android:layout_height="61dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="TextView"
+            android:textColor="@color/black"
+            android:textStyle="bold"
+            android:textSize="15dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.497"

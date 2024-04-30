@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
     RequestQueue requestQueue;
 
     Toolbar toolbar;
+
     ActionBar actionBar;
     double wallet;
     TextView tvPortfolio, tvWorth, tvBalance, tvFavs, tvFooter;
@@ -66,11 +67,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
     ConstraintLayout portfolioStats;
 
     RecyclerView rvPortfolio, rvFavourites;
+    double net_worth=0.0;
 
     ImageView ivArrow;
 
     ArrayList<portfolioStocks> portfolio_arraylist = new ArrayList<>();
     ArrayList<portfolioStocks> favourites_arraylist = new ArrayList<>();
+
+    Bundle bundle = new Bundle();
 
 //    ArrayList<StockPeers> peers_arraylist = new ArrayList<>();
     final DecimalFormat df = new DecimalFormat("0.00");
@@ -97,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                 try {
                     tvBalance.setText("Cash Balance \n$"+s.getString("wallet"));
                     wallet = parseDouble(s.getString("wallet"));
+                    net_worth=net_worth+wallet;
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
@@ -125,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         portfolioStats = (ConstraintLayout) findViewById(R.id.portfolioStatsCard);
         tvWorth = (TextView) portfolioStats.findViewById(R.id.textViewWorth);
         tvBalance = (TextView) portfolioStats.findViewById(R.id.textViewBalance);
-        tvWorth.setText("Net Worth \n$25000.00");
+//        tvWorth.setText("Net Worth \n$25000.00");
 //        tvBalance.setText("Cash Balance \n$25000.00");
         requestQueue.add(getwalletRequest);
 
@@ -133,13 +138,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         tvFavs.setBackgroundColor(Color.parseColor("#E1E1E1"));
 
         tvFooter = (TextView) findViewById(R.id.footer);
+
         tvFooter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Uri uri = Uri.parse("https://www.finnhub.io/");
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                //startActivity(intent);
-                startActivity(new Intent(MainActivity.this, StockDetails.class));
+                startActivity(intent);
+//                startActivity(new Intent(MainActivity.this, StockDetails.class));
             }
         });
 
@@ -176,6 +182,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
                                     Log.d("price-in-response", String.valueOf(price));
                                     double market_value = price*quantity;
+                                    net_worth=net_worth+market_value;
+                                    tvWorth.setText("Net Worth \n$"+net_worth);
+
                                     df.format(market_value);
                                     obj.setPrice(market_value);
                                     obj.setTicker(ticker);
@@ -230,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                         requestQueue.add(stockRequest);
 
                     }
+
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
@@ -395,9 +405,46 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         @Override
         public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getAdapterPosition();
-
+//            String deleteFavroutiesUrl = getString(R.string.gcp_url)+"api/watchlist/remove-from-watchlist";
+//            JsonObjectRequest deleteFavRequest = new JsonObjectRequest(Request.Method.DELETE, deleteFavroutiesUrl, null, new Response.Listener<JSONObject>() {
+//                @Override
+//                public void onResponse(JSONObject jsonObject) {
+//                    try {
+//                        String res = jsonObject.getString("message");
+//                        System.out.println(res+"response in delete");
+//                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }
+//            }, new Response.ErrorListener() {
+//                @Override
+//                public void onErrorResponse(VolleyError volleyError) {
+//
+//                }
+//            }){
+//                @Override
+//                public String getBodyContentType() {
+//                    return "application/json; charset=utf-8";
+//                }
+//
+//                @Override
+//                public byte[] getBody() {
+//                    JSONObject reqBody = new JSONObject();
+//                    try {
+//                        System.out.println(favourites_arraylist.get(position).getTicker()+"delete this ticker");
+//                        reqBody.put("symbol", favourites_arraylist.get(position).getTicker());
+//                        return reqBody.toString().getBytes("utf-8");
+//                    } catch (JSONException e) {
+//                        throw new RuntimeException(e);
+//                    } catch (UnsupportedEncodingException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }
+//            };
+//            requestQueue.add(deleteFavRequest);
             favourites_arraylist.remove(position);
             rvFavourites.getAdapter().notifyItemRemoved(position);
+
         }
 
         @Override
@@ -424,6 +471,11 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
+//               Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
+                Intent i = new Intent(MainActivity.this, StockDetails.class);
+                bundle.putString("ticker",query);
+                i.putExtras(bundle);
+                startActivity(i);
                 return false;
             }
 

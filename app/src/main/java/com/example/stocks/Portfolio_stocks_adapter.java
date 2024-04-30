@@ -1,7 +1,11 @@
 package com.example.stocks;
 
+import static androidx.core.content.ContextCompat.startActivity;
+
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,7 +55,13 @@ public class Portfolio_stocks_adapter extends RecyclerView.Adapter<Portfolio_sto
         holder.ivArrow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context.getApplicationContext(), pos+"", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(context.getApplicationContext(), pos+"", Toast.LENGTH_SHORT).show();
+                Intent i = new Intent(context, StockDetails.class);
+                i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Bundle bundle = new Bundle();
+                bundle.putString("ticker",arrayList.get(pos).getTicker());
+                i.putExtras(bundle);
+                context.startActivity(i);
 
             }
         });

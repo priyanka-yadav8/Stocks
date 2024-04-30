@@ -1,6 +1,8 @@
 package com.example.stocks;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,8 @@ public class Peers_adapter extends RecyclerView.Adapter<Peers_adapter.MyViewHold
     @Override
     public void onBindViewHolder(@NonNull Peers_adapter.MyViewHolder holder, int position) {
         holder.tvPeer.setText(stockPeers.get(position).getPeer()+", ");
+        holder.tvPeer.setTextColor(Color.parseColor("#4343FF"));
+        holder.tvPeer.setPaintFlags(holder.tvPeer.getPaintFlags()| Paint.UNDERLINE_TEXT_FLAG);
     }
 
     @Override
@@ -47,6 +51,7 @@ public class Peers_adapter extends RecyclerView.Adapter<Peers_adapter.MyViewHold
 
             super(itemView);
             tvPeer = (TextView) itemView.findViewById(R.id.textViewPeerList);
+
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
