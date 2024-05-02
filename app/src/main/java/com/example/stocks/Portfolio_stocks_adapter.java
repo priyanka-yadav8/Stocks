@@ -50,8 +50,8 @@ public class Portfolio_stocks_adapter extends RecyclerView.Adapter<Portfolio_sto
             holder.tvPortfolioShares.setText(arrayList.get(position).getName());
 
         }
-        holder.tvPortfolioPrice.setText("$"+arrayList.get(position).getPrice());
-        holder.tvPortfolioChange.setText("$"+arrayList.get(position).getChange()+"( "+arrayList.get(position).getPercentageChange()+"% )");
+        holder.tvPortfolioPrice.setText("$"+String.format("%.2f",arrayList.get(position).getPrice()));
+        holder.tvPortfolioChange.setText("$"+String.format("%.2f",arrayList.get(position).getChange())+"( "+String.format("%.2f",arrayList.get(position).getPercentageChange())+"% )");
         holder.ivArrow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

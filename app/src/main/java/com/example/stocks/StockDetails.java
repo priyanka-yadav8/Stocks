@@ -25,6 +25,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -106,6 +108,9 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
     ViewPager viewPager;
 
     MenuItem starIcon;
+
+    LinearLayout linearLayout2;
+    ProgressBar progressBar2;
     int color;
 
     double wallet = 0, current_price=0, avg_cost=0;
@@ -123,6 +128,9 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_stock_details);
+
+        progressBar2 = (ProgressBar) findViewById(R.id.progressBar2);
+        linearLayout2 = (LinearLayout) findViewById(R.id.linearLayoutStockDetails);
 
         requestQueue = Volley.newRequestQueue(this);
 
@@ -213,26 +221,26 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
         rvPeers = (RecyclerView) findViewById(R.id.recyclerViewPeers);
 
         //get portfolio request
-        String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-one-stock-portfolio/"+tickerGlobal;
+        String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-one-stock-portfolio/"+tickerGlobal.toUpperCase();
 
         JsonObjectRequest getPortfolioRequest = new JsonObjectRequest(Request.Method.GET, getPortfolioUrl, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject jsonObject) {
                 try {
-                    tvSharesOwned.setText(jsonObject.getString("quantity"));
-                    tvAvgCost.setText(jsonObject.getString("cost_price"));
+                    tvSharesOwned.setText(jsonObject.getString("quantity")+"");
+                    tvAvgCost.setText("$"+jsonObject.getString("cost_price"));
 
                     double quantity = Double.parseDouble(jsonObject.getString("quantity"));
                     double cost_price = Double.parseDouble(jsonObject.getString("cost_price"));
                     double total_cost = quantity*cost_price;
                     df.format(total_cost);
-                    tvTotalCost.setText(String.valueOf(total_cost));
+                    tvTotalCost.setText(String.format("%.2f",total_cost));
                     double current_price = Double.parseDouble(tvPrice.getText().toString());
                     double change = current_price - cost_price;
                     df.format(change);
-                    tvChangePortfolio.setText("$"+String.valueOf(change).substring(0,5));
+                    tvChangePortfolio.setText("$"+String.format("%.2f", change));
                     double market_value = current_price*quantity;
-                    tvMarketValue.setText("$"+String.valueOf(market_value));
+                    tvMarketValue.setText("$"+String.format("%.2f",market_value));
                     if(change>0){
                         tvChangePortfolio.setTextColor(Color.GREEN);
                         tvMarketValue.setTextColor(Color.GREEN);
@@ -274,7 +282,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                     current_price = Double.parseDouble(stock_details.getString("last_price"));
                     String change = stock_details.getString("change")+"("+stock_details.getString("change_percentage")+")";
                     tvChange.setText(change);
-                    if(Double.parseDouble(stock_details.getString("change"))>=0){
+                    if(Double.parseDouble(stock_details.getString("change"))>0){
                         color =1;
                     } else {
                         color =0;
@@ -335,6 +343,9 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                         rvPeers.getAdapter().notifyItemInserted(peers_arraylist.size());
 
                     }
+
+                    progressBar2.setVisibility(View.INVISIBLE);
+                    linearLayout2.setVisibility(View.VISIBLE);
 
 
 
@@ -507,6 +518,8 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                     }
                 });
 
+
+
             }
         }, new Response.ErrorListener() {
             @Override
@@ -574,6 +587,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
 
 
         buyDialog = new Dialog(StockDetails.this);
+        buyDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         buyDialog.setContentView(R.layout.buy_dialog);
         buttonDone = (Button) buyDialog.findViewById(R.id.buttonTradeDialogDone);
         tvStatus = (TextView) buyDialog.findViewById(R.id.textViewTradeDialogStatus);
@@ -582,14 +596,14 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
             @Override
             public void onClick(View v) {
                 tvTradeTitle.setText("Trade "+tickerGlobal+" shares");
-                tvTradeCost.setText("0*$"+current_price+"/share = 0.00");
-                tvTradeBuy.setText("$"+wallet+" to buy "+tickerGlobal.toUpperCase());
-
+                tvTradeCost.setText("0*$"+String.format("%.2f",current_price)+"/share = 0.00");
+                tvTradeBuy.setText("$"+String.format("%.2f",wallet)+" to buy "+tickerGlobal.toUpperCase());
+                etQuantity.setText(String.valueOf(0));
                 tradeDialog.show();
                 buttonBuy.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        tvStatus.setText("Bought");
+//                        tvStatus.setText("Bought");
                         if(quanity_to_trade<1){
                             Toast.makeText(StockDetails.this, "Cannot buy non-positive shares", Toast.LENGTH_SHORT).show();
                         } else if(current_price*quanity_to_trade>wallet){
@@ -600,7 +614,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                             JsonObjectRequest updateWalletRequest = new JsonObjectRequest(Request.Method.PATCH, updateWalletUrl, null, new Response.Listener<JSONObject>() {
                                 @Override
                                 public void onResponse(JSONObject jsonObject) {
-                                    tvTradeBuy.setText("$"+nayaWallet+" to buy "+ tickerGlobal);
+                                    tvTradeBuy.setText("$"+String.format("%.2f", nayaWallet)+" to buy "+ tickerGlobal);
                                 }
                             }, new Response.ErrorListener() {
                                 @Override
@@ -627,96 +641,130 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                                 }
                             };
                             requestQueue.add(updateWalletRequest);
+                            if(shares_owned == 0){
+                                shares_owned = quanity_to_trade;
+                                avg_cost = current_price;
+//                            tvTotalCost.setText("$"+String.format("%.2f",avg_cost*shares_owned));
+                                String addToPortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/add-to-portfolio";
+                                JSONObject requestBody = new JSONObject();
+                                try {
+                                    requestBody.put("ticker", tickerGlobal.toUpperCase());
+                                    requestBody.put("name", stockName);
+                                    requestBody.put("quantity", quanity_to_trade);
+                                    requestBody.put("cost_price", current_price);
+
+                                } catch (Exception e){
+                                    Log.d("update-portfolio-error", e.getMessage());
+                                }
+                                JsonObjectRequest addToPortfolioRequest = new JsonObjectRequest(Request.Method.POST, addToPortfolioUrl, null, new Response.Listener<JSONObject>() {
+                                    @Override
+                                    public void onResponse(JSONObject jsonObject) {
+                                        tradeDialog.dismiss();
+                                        tvStatus.setText("You have Successfully bough "+quanity_to_trade+ " shares of "+tickerGlobal);
+                                        tvSharesOwned.setText(shares_owned+"");
+                                        tvAvgCost.setText("$"+String.format("%.2f",avg_cost));
+                                        tvTotalCost.setText("$"+String.format("%.2f", avg_cost*shares_owned));
+                                        tvChangePortfolio.setText("$"+String.format("%.2f", current_price - avg_cost));
+                                        tvMarketValue.setText("$"+String.format("%.2f", current_price*shares_owned));
+                                        if(current_price - avg_cost > 0){
+                                            tvChangePortfolio.setTextColor(Color.GREEN);
+                                            tvMarketValue.setTextColor(Color.GREEN);
+
+                                        } else{
+                                            tvChangePortfolio.setTextColor(Color.RED);
+                                            tvMarketValue.setTextColor(Color.RED);
+
+                                        }
+
+
+
+                                        buyDialog.show();
+                                    }
+                                }, new Response.ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError volleyError) {
+
+                                    }
+                                }){
+
+                                    @Override
+                                    public String getBodyContentType() {
+                                        return "application/json; charset=utf-8";
+                                    }
+
+                                    @Override
+                                    public byte[] getBody() {
+                                        try {
+                                            return requestBody.toString().getBytes("utf-8");
+                                        } catch (UnsupportedEncodingException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }
+                                };
+                                requestQueue.add(addToPortfolioRequest);
+                            } else {
+                                String updatePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/update-portfolio/"+tickerGlobal.toUpperCase();
+                                int new_quantity = shares_owned + quanity_to_trade;
+                                double new_cost_price = (avg_cost + current_price)/2;
+                                shares_owned = new_quantity;
+                                avg_cost = new_cost_price;
+
+                                JSONObject requestBody = new JSONObject();
+                                try {
+                                    requestBody.put("quantity", new_quantity);
+                                    requestBody.put("cost_price",new_cost_price);
+                                } catch (Exception e){
+                                    Log.d("update-portfolio-error", String.valueOf(e));
+                                }
+                                JsonObjectRequest updatePortfolioRequest = new JsonObjectRequest(Request.Method.PATCH, updatePortfolioUrl, null, new Response.Listener<JSONObject>() {
+                                    @Override
+                                    public void onResponse(JSONObject jsonObject) {
+                                        tradeDialog.dismiss();
+                                        tvStatus.setText("You have Successfully bought "+quanity_to_trade+ " shares of "+tickerGlobal);
+                                        tvSharesOwned.setText(shares_owned+"");
+                                        tvAvgCost.setText("$"+String.format("%.2f",avg_cost));
+                                        tvTotalCost.setText("$"+String.format("%.2f", avg_cost*shares_owned));
+                                        tvChangePortfolio.setText("$"+String.format("%.2f",current_price-avg_cost));
+                                        tvMarketValue.setText("$"+String.format("%.2f", current_price* shares_owned));
+                                        if(current_price - avg_cost > 0){
+                                            tvChangePortfolio.setTextColor(Color.GREEN);
+                                            tvMarketValue.setTextColor(Color.GREEN);
+
+                                        } else{
+                                            tvChangePortfolio.setTextColor(Color.RED);
+                                            tvMarketValue.setTextColor(Color.RED);
+
+                                        }
+
+                                        buyDialog.show();
+                                    }
+                                }, new Response.ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError volleyError) {
+
+                                    }
+                                }){
+
+                                    @Override
+                                    public String getBodyContentType() {
+                                        return "application/json; charset=utf-8";
+                                    }
+
+                                    @Override
+                                    public byte[] getBody() {
+                                        try {
+                                            return requestBody.toString().getBytes("utf-8");
+                                        } catch (UnsupportedEncodingException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }
+                                };
+                                requestQueue.add(updatePortfolioRequest);
+
+                            }
                         }
 
-                        if(shares_owned == 0){
-                            shares_owned = quanity_to_trade;
-                            avg_cost = current_price;
-                            String addToPortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/add-to-portfolio";
-                            JSONObject requestBody = new JSONObject();
-                            try {
-                                requestBody.put("ticker", tickerGlobal.toUpperCase());
-                                requestBody.put("name", stockName);
-                                requestBody.put("quantity", quanity_to_trade);
-                                requestBody.put("cost_price", current_price);
 
-                            } catch (Exception e){
-                                Log.d("update-portfolio-error", e.getMessage());
-                            }
-                            JsonObjectRequest addToPortfolioRequest = new JsonObjectRequest(Request.Method.POST, addToPortfolioUrl, null, new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject jsonObject) {
-                                    tradeDialog.dismiss();
-                                    tvStatus.setText("You have Successfully bough "+quanity_to_trade+ " shares of "+tickerGlobal);
-                                    buyDialog.show();
-                                }
-                            }, new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError volleyError) {
-
-                                }
-                            }){
-
-                                @Override
-                                public String getBodyContentType() {
-                                    return "application/json; charset=utf-8";
-                                }
-
-                                @Override
-                                public byte[] getBody() {
-                                    try {
-                                        return requestBody.toString().getBytes("utf-8");
-                                    } catch (UnsupportedEncodingException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            };
-                            requestQueue.add(addToPortfolioRequest);
-                        } else {
-                            String updatePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/update-portfolio/"+tickerGlobal;
-                            int new_quantity = shares_owned + quanity_to_trade;
-                            double new_cost_price = (avg_cost + current_price)/2;
-                            shares_owned = new_quantity;
-                            avg_cost = new_cost_price;
-
-                            JSONObject requestBody = new JSONObject();
-                            try {
-                                requestBody.put("quantity", new_quantity);
-                                requestBody.put("cost_price",new_cost_price);
-                            } catch (Exception e){
-                                Log.d("update-portfolio-error", String.valueOf(e));
-                            }
-                            JsonObjectRequest updatePortfolioRequest = new JsonObjectRequest(Request.Method.PATCH, updatePortfolioUrl, null, new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject jsonObject) {
-                                    tradeDialog.dismiss();
-                                    tvStatus.setText("You have Successfully bought "+quanity_to_trade+ " shares of "+tickerGlobal);
-                                    buyDialog.show();
-                                }
-                            }, new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError volleyError) {
-
-                                }
-                            }){
-
-                                @Override
-                                public String getBodyContentType() {
-                                    return "application/json; charset=utf-8";
-                                }
-
-                                @Override
-                                public byte[] getBody() {
-                                    try {
-                                        return requestBody.toString().getBytes("utf-8");
-                                    } catch (UnsupportedEncodingException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            };
-                            requestQueue.add(updatePortfolioRequest);
-
-                        }
 
 
 //                        buyDialog.show();
@@ -725,7 +773,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                 buttonSell.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        tvStatus.setText("Bought");
+//                        tvStatus.setText("Bought");
                         if(quanity_to_trade<1){
                             Toast.makeText(StockDetails.this, "Cannot sell non-positive shares", Toast.LENGTH_SHORT).show();
                         } else if(quanity_to_trade>shares_owned){
@@ -736,7 +784,8 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                             JsonObjectRequest updateWalletRequest = new JsonObjectRequest(Request.Method.PATCH, updateWalletUrl, null, new Response.Listener<JSONObject>() {
                                 @Override
                                 public void onResponse(JSONObject jsonObject) {
-                                    tvTradeBuy.setText("$"+nayaWallet+" to buy "+ tickerGlobal);
+                                    tvTradeBuy.setText("$"+String.format("%.2f",nayaWallet)+" to buy "+ tickerGlobal);
+
                                 }
                             }, new Response.ErrorListener() {
                                 @Override
@@ -763,72 +812,94 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                                 }
                             };
                             requestQueue.add(updateWalletRequest);
-                        }
 
-                        if(shares_owned == quanity_to_trade){
-                            shares_owned = 0;
-                            avg_cost = 0.00;
-                            String deletePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/remove-from-portfolio"+tickerGlobal;
+                            if(shares_owned == quanity_to_trade){
+                                shares_owned = 0;
+                                avg_cost = 0.00;
+                                String deletePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/remove-from-portfolio/"+tickerGlobal.toUpperCase();
 
-                            JsonObjectRequest deletePortfolioRequest = new JsonObjectRequest(Request.Method.DELETE, deletePortfolioUrl, null, new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject jsonObject) {
-                                    tradeDialog.dismiss();
-                                    tvStatus.setText("You have Successfully sold "+quanity_to_trade+ " shares of "+tickerGlobal);
-                                    buyDialog.show();
-                                }
-                            }, new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError volleyError) {
+                                JsonObjectRequest deletePortfolioRequest = new JsonObjectRequest(Request.Method.DELETE, deletePortfolioUrl, null, new Response.Listener<JSONObject>() {
+                                    @Override
+                                    public void onResponse(JSONObject jsonObject) {
+                                        tradeDialog.dismiss();
+                                        tvStatus.setText("You have Successfully sold "+quanity_to_trade+ " shares of "+tickerGlobal);
+                                        tvSharesOwned.setText(shares_owned+"");
+                                        tvAvgCost.setText("$"+String.format("%.2f",avg_cost));
+                                        tvTotalCost.setText("$"+ String.format("%.2f", shares_owned*avg_cost));
+                                        tvChangePortfolio.setText("$"+0);
+                                        tvMarketValue.setText("$"+String.format("%.2f", current_price*shares_owned));
+                                        buyDialog.show();
+                                    }
+                                }, new Response.ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError volleyError) {
 
-                                }
-                            });
-                            requestQueue.add(deletePortfolioRequest);
-                        } else {
-                            String updatePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/update-portfolio/"+tickerGlobal.toUpperCase();
-                            int new_quantity = shares_owned - quanity_to_trade;
+                                    }
+                                });
+                                requestQueue.add(deletePortfolioRequest);
+                            } else {
+                                String updatePortfolioUrl = getString(R.string.gcp_url)+"api/portfolio/update-portfolio/"+tickerGlobal.toUpperCase();
+                                int new_quantity = shares_owned - quanity_to_trade;
 //                            double new_cost_price = (avg_cost + current_price)/2;
-                            shares_owned = new_quantity;
+                                shares_owned = new_quantity;
 //                            avg_cost = new_cost_price;
 
-                            JSONObject requestBody = new JSONObject();
-                            try {
-                                requestBody.put("quantity", new_quantity);
-                                requestBody.put("cost_price",avg_cost);
-                            } catch (Exception e){
-                                Log.d("update-portfolio-error", String.valueOf(e));
-                            }
-                            JsonObjectRequest updatePortfolioRequest = new JsonObjectRequest(Request.Method.PATCH, updatePortfolioUrl, null, new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject jsonObject) {
-                                    tradeDialog.dismiss();
-                                    tvStatus.setText("You have Successfully sold "+quanity_to_trade+ " shares of "+tickerGlobal);
-                                    buyDialog.show();
+                                JSONObject requestBody = new JSONObject();
+                                try {
+                                    requestBody.put("quantity", new_quantity);
+                                    requestBody.put("cost_price",avg_cost);
+                                } catch (Exception e){
+                                    Log.d("update-portfolio-error", String.valueOf(e));
                                 }
-                            }, new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError volleyError) {
+                                JsonObjectRequest updatePortfolioRequest = new JsonObjectRequest(Request.Method.PATCH, updatePortfolioUrl, null, new Response.Listener<JSONObject>() {
+                                    @Override
+                                    public void onResponse(JSONObject jsonObject) {
+                                        tradeDialog.dismiss();
+                                        tvStatus.setText("You have Successfully sold "+quanity_to_trade+ " shares of "+tickerGlobal);
+                                        tvSharesOwned.setText(shares_owned+"");
+                                        tvAvgCost.setText("$"+String.format("%.2f",avg_cost));
+                                        tvTotalCost.setText("$"+String.format("%.2f", shares_owned*avg_cost));
+                                        tvChangePortfolio.setText("$"+String.format("%.2f", current_price - avg_cost));
+                                        tvMarketValue.setText("$"+String.format("%.2f",current_price*shares_owned));
+                                        if(current_price - avg_cost > 0){
+                                            tvChangePortfolio.setTextColor(Color.GREEN);
+                                            tvMarketValue.setTextColor(Color.GREEN);
 
-                                }
-                            }){
+                                        } else{
+                                            tvChangePortfolio.setTextColor(Color.RED);
+                                            tvMarketValue.setTextColor(Color.RED);
 
-                                @Override
-                                public String getBodyContentType() {
-                                    return "application/json; charset=utf-8";
-                                }
+                                        }
 
-                                @Override
-                                public byte[] getBody() {
-                                    try {
-                                        return requestBody.toString().getBytes("utf-8");
-                                    } catch (UnsupportedEncodingException e) {
-                                        throw new RuntimeException(e);
+                                        buyDialog.show();
                                     }
-                                }
-                            };
-                            requestQueue.add(updatePortfolioRequest);
+                                }, new Response.ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError volleyError) {
+
+                                    }
+                                }){
+
+                                    @Override
+                                    public String getBodyContentType() {
+                                        return "application/json; charset=utf-8";
+                                    }
+
+                                    @Override
+                                    public byte[] getBody() {
+                                        try {
+                                            return requestBody.toString().getBytes("utf-8");
+                                        } catch (UnsupportedEncodingException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }
+                                };
+                                requestQueue.add(updatePortfolioRequest);
+
+                            }
 
                         }
+
 
 
 //                        buyDialog.show();
@@ -856,7 +927,7 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
                         quanity_to_trade =0;
                     }
                 }
-                tvTradeCost.setText(quanity_to_trade+"*$"+current_price+"/share = "+String.format("%.2f", current_price*quanity_to_trade));
+                tvTradeCost.setText(quanity_to_trade+"*$"+String.format("%.2f",current_price)+"/share = "+String.format("%.2f", current_price*quanity_to_trade));
             }
 
             @Override
@@ -985,7 +1056,53 @@ public class StockDetails extends AppCompatActivity implements NewsRVInterface, 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if(item.getItemId() == R.id.infoStar){
-            item.setIcon(R.drawable.full_star);
+            if(isFav){
+                item.setIcon(R.drawable.star_border);
+                isFav = false;
+                Toast.makeText(this, tickerGlobal+" is removed from the favourites", Toast.LENGTH_SHORT).show();
+            } else {
+                String addToWatchlistUrl = getString(R.string.gcp_url)+"api/watchlist/add-to-watchlist";
+                JSONObject requestBody = new JSONObject();
+                try {
+                    requestBody.put("ticker", tickerGlobal.toUpperCase());
+                    requestBody.put("name", tvName.getText());
+
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+
+                JsonObjectRequest addToWatchlistRequest = new JsonObjectRequest(Request.Method.POST, addToWatchlistUrl, null, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject jsonObject) {
+                        item.setIcon(R.drawable.full_star);
+                        isFav = true;
+                        Toast.makeText(StockDetails.this, tickerGlobal+" is added to Watchlist", Toast.LENGTH_SHORT).show();
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError volleyError) {
+
+                    }
+                }){
+
+                    @Override
+                    public String getBodyContentType() {
+                        return "application/json; charset=utf-8";
+                    }
+
+                    @Override
+                    public byte[] getBody() {
+                        try {
+
+                            return requestBody.toString().getBytes("utf-8");
+                        } catch (UnsupportedEncodingException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                };
+                requestQueue.add(addToWatchlistRequest);
+            }
         }
         return super.onOptionsItemSelected(item);
     }

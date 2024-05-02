@@ -24,75 +24,92 @@
         android:theme="?attr/actionBarTheme" />
 
 
-    <EditText
-        android:id="@+id/editTextDate"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ems="10"
-        android:inputType="text"
-        android:textSize="20dp"
-        android:textStyle="bold"
-        android:background="@null"
-        android:textColor="#808080"
-        android:enabled="false"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
-        android:paddingLeft="10dp"/>
+        android:id="@+id/linearLayoutMainActivity"
+        android:orientation="vertical"
+        android:visibility="gone"
+        >
+        <EditText
+            android:id="@+id/editTextDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="text"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            android:background="@null"
+            android:textColor="#808080"
+            android:enabled="false"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:paddingLeft="10dp"/>
 
 
-    <TextView
-        android:id="@+id/textViewPortfolio"
+        <TextView
+            android:id="@+id/textViewPortfolio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"
+            android:textSize="15dp"
+            android:paddingTop="7dp"
+            android:paddingBottom="7dp"
+            android:paddingLeft="10dp"/>
+
+
+        <include
+            layout="@layout/portfolio_stats"
+            android:id="@+id/portfolioStatsCard"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/recyclerViewPortfolio"/>
+
+        <TextView
+            android:id="@+id/textViewFavs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"
+            android:textSize="15dp"
+            android:text="FAVORITES"
+            android:paddingTop="7dp"
+            android:paddingBottom="7dp"
+            android:paddingLeft="10dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/recyclerViewFavourites"/>
+
+        <TextView
+            android:id="@+id/footer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Powered by Finnhub"
+            android:textColor="#808080"
+            android:gravity="center"
+            android:textStyle="italic"
+            android:layout_marginTop="10dp"/>
+
+    </LinearLayout>
+
+    <ProgressBar
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:textStyle="bold"
-        android:textSize="15dp"
-        android:paddingTop="7dp"
-        android:paddingBottom="7dp"
-        android:paddingLeft="10dp"/>
+        android:id="@+id/progressBarMain"
+        android:layout_marginTop="300dp"/>
 
-
-    <include
-        layout="@layout/portfolio_stats"
-        android:id="@+id/portfolioStatsCard"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/recyclerViewPortfolio"/>
-
-    <TextView
-        android:id="@+id/textViewFavs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:textStyle="bold"
-        android:textSize="15dp"
-        android:text="FAVORITES"
-        android:paddingTop="7dp"
-        android:paddingBottom="7dp"
-        android:paddingLeft="10dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/recyclerViewFavourites"/>
-
-    <TextView
-        android:id="@+id/footer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Powered by Finnhub"
-        android:textColor="#808080"
-        android:gravity="center"
-        android:textStyle="italic"
-        android:layout_marginTop="10dp"/>
 
 
 

@@ -2,6 +2,7 @@ package com.example.stocks;
 
 import static java.lang.Double.parseDouble;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,9 +12,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageView;
 import androidx.appcompat.widget.SearchView;
+
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.widget.Toolbar;
@@ -25,6 +31,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
+import androidx.core.view.MenuItemCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -71,6 +78,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
     ImageView ivArrow;
 
+    ProgressBar progressBarMain;
+    LinearLayout linearLayoutMain;
+
     ArrayList<portfolioStocks> portfolio_arraylist = new ArrayList<>();
     ArrayList<portfolioStocks> favourites_arraylist = new ArrayList<>();
 
@@ -84,6 +94,9 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        linearLayoutMain = (LinearLayout) findViewById(R.id.linearLayoutMainActivity);
+        progressBarMain = (ProgressBar) findViewById(R.id.progressBarMain);
+
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         actionBar = getSupportActionBar();
@@ -93,31 +106,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
 
         //get wallet volley request
-        String getWalletUrl = getString(R.string.gcp_url)+"api/wallet/get-wallet";
-        JsonObjectRequest getwalletRequest = new JsonObjectRequest(Request.Method.GET, getWalletUrl,null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject s) {
-                Log.d("wallet", s.toString());
-                try {
-                    tvBalance.setText("Cash Balance \n$"+s.getString("wallet"));
-                    wallet = parseDouble(s.getString("wallet"));
-                    net_worth=net_worth+wallet;
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError volleyError) {
-                Log.d("wallet error",volleyError.toString());
-            }
-        });
-
-
-
-
-
-
+//        getWallet();
 
         tvPortfolio = (TextView) findViewById(R.id.textViewPortfolio);
         tvPortfolio.setText("PORTFOLIO");
@@ -130,9 +119,6 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         portfolioStats = (ConstraintLayout) findViewById(R.id.portfolioStatsCard);
         tvWorth = (TextView) portfolioStats.findViewById(R.id.textViewWorth);
         tvBalance = (TextView) portfolioStats.findViewById(R.id.textViewBalance);
-//        tvWorth.setText("Net Worth \n$25000.00");
-//        tvBalance.setText("Cash Balance \n$25000.00");
-        requestQueue.add(getwalletRequest);
 
         tvFavs = (TextView) findViewById(R.id.textViewFavs);
         tvFavs.setBackgroundColor(Color.parseColor("#E1E1E1"));
@@ -153,6 +139,74 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         rvPortfolio = (RecyclerView) findViewById(R.id.recyclerViewPortfolio);
 
         //get portfolio request
+//        getPortfolio();
+
+        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
+        rvPortfolio.setAdapter(portfolio_adapter);
+        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+
+
+        ItemTouchHelper itemTouchHelperPortfolio = new ItemTouchHelper(simpleCallbackPortfolio);
+        itemTouchHelperPortfolio.attachToRecyclerView(rvPortfolio);
+
+        rvFavourites = (RecyclerView) findViewById(R.id.recyclerViewFavourites);
+
+        //get watchlist api
+//       getWatchlist();
+
+
+        ItemTouchHelper itemTouchHelperFavourites = new ItemTouchHelper(simpleCallbackFavourites);
+        itemTouchHelperFavourites.attachToRecyclerView(rvFavourites);
+
+
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
+
+
+    }
+
+
+    public void getWallet(){
+        wallet = 0;
+        net_worth = 0;
+        //get wallet volley request
+        String getWalletUrl = getString(R.string.gcp_url)+"api/wallet/get-wallet";
+        JsonObjectRequest getwalletRequest = new JsonObjectRequest(Request.Method.GET, getWalletUrl,null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject s) {
+                Log.d("wallet", s.toString());
+                try {
+                    double bal = parseDouble(s.getString("wallet"));
+
+                    tvBalance.setText("Cash Balance \n$"+String.format("%.2f", bal));
+                    wallet = parseDouble(s.getString("wallet"));
+                    net_worth=net_worth+wallet;
+                    tvWorth.setText("Net Worth \n$"+String.format("%.2f", net_worth));
+                    progressBarMain.setVisibility(View.INVISIBLE);
+                    linearLayoutMain.setVisibility(View.VISIBLE);
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+                Log.d("wallet error",volleyError.toString());
+            }
+        });
+        requestQueue.add(getwalletRequest);
+    }
+
+    public void getPortfolio(){
+        while (!portfolio_arraylist.isEmpty()){
+            portfolio_arraylist.remove(0);
+            rvPortfolio.getAdapter().notifyItemRemoved(0);
+        }
         String getPortfolioUrl= getString(R.string.gcp_url)+"api/portfolio/get-portfolio";
         JsonObjectRequest getPortfolioRequest = new JsonObjectRequest(Request.Method.GET, getPortfolioUrl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -183,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
                                     Log.d("price-in-response", String.valueOf(price));
                                     double market_value = price*quantity;
                                     net_worth=net_worth+market_value;
-                                    tvWorth.setText("Net Worth \n$"+net_worth);
+                                    tvWorth.setText("Net Worth \n$"+String.format("%.2f",net_worth));
 
                                     df.format(market_value);
                                     obj.setPrice(market_value);
@@ -253,17 +307,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
             }
         });
-
-        Portfolio_stocks_adapter portfolio_adapter = new Portfolio_stocks_adapter(getApplicationContext(),portfolio_arraylist, 0);
-        rvPortfolio.setAdapter(portfolio_adapter);
-        rvPortfolio.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
-
         requestQueue.add(getPortfolioRequest);
+    }
 
-        ItemTouchHelper itemTouchHelperPortfolio = new ItemTouchHelper(simpleCallbackPortfolio);
-        itemTouchHelperPortfolio.attachToRecyclerView(rvPortfolio);
-
-        rvFavourites = (RecyclerView) findViewById(R.id.recyclerViewFavourites);
+    public void getWatchlist(){
+        while (!favourites_arraylist.isEmpty()){
+            favourites_arraylist.remove(0);
+            rvFavourites.getAdapter().notifyItemRemoved(0);
+        }
         String getWatchlistUrl = getString(R.string.gcp_url)+"api/watchlist/get-watchlist";
         JsonObjectRequest getWatchlistRequest = new JsonObjectRequest(Request.Method.GET, getWatchlistUrl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -355,25 +406,7 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
         });
 
         requestQueue.add(getWatchlistRequest);
-
-//        Portfolio_stocks_adapter favourites_adapter = new Portfolio_stocks_adapter(this, favourites_arraylist, 1, this);
-//        rvFavourites.setAdapter(favourites_adapter);
-//        rvFavourites.setLayoutManager(new LinearLayoutManager(this));
-        ItemTouchHelper itemTouchHelperFavourites = new ItemTouchHelper(simpleCallbackFavourites);
-        itemTouchHelperFavourites.attachToRecyclerView(rvFavourites);
-
-
-
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-
-
     }
-
     ItemTouchHelper.SimpleCallback simpleCallbackPortfolio = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN | ItemTouchHelper.START | ItemTouchHelper.END, 0) {
         @Override
         public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
@@ -463,17 +496,98 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu,menu);
+
+        //actionBar.setDisplayHomeAsUpEnabled(true);
+        getMenuInflater().inflate(R.menu.menu, menu);
         MenuItem menuItem = menu.findItem(R.id.searchBar);
-        SearchView searchView = (SearchView) menuItem.getActionView();
+
+        String[][] companies = {
+                {"AGILENT TECHNOLOGIES INC", "A"},
+                {"AUTONATION INC", "AN"},
+                {"ADAMS RESOURCES & ENERGY INC", "AE"},
+                {"AMPCO-PITTSBURGH CORP", "AP"},
+                {"AMER SPORTS INC", "AS"},
+                {"ATLANTICA SUSTAINABLE INFRAS", "AY"},
+                {"A2Z SMART TECHNOLOGIES CORP", "AZ"},
+                {"ALCOA CORP", "AA"},
+                {"AXOS FINANCIAL INC", "AX"},
+                {"C3.AI INC-A", "AI"},
+                {"ANGLOGOLD ASHANTI PLC", "AU"},
+                {"ASSOCIATED CAPITAL GROUP - A", "AC"},
+                {"ANTERO MIDSTREAM CORP", "AM"},
+                {"ANTERO RESOURCES CORP", "AR"},
+                {"FIRST MAJESTIC SILVER CORP", "AG"},
+                {"AIR LEASE CORP", "AL"},
+                {"AMERICAN AIRLINES GROUP INC", "AAL"},
+                {"AARON'S CO INC/THE", "AAN"},
+                {"ADVANCE AUTO PARTS INC", "AAP"},
+                {"AAP INC", "AAPJ"},
+                {"ALL AMERICAN PET CO INC", "AAPT"},
+                {"APPLE ISPORT GROUP INC", "AAPI"},
+                {"APPLE INC", "AAPL"},
+                {"A2A SPA", "AEMMF"},
+                {"XAAR PLC", "XAARF"},
+                {"NIOCORP DEVELOPMENTS LTD", "NB"},
+                {"NEXTNAV INC", "NN"},
+                {"QUANEX BUILDING PRODUCTS", "NX"},
+                {"NOBLE CORP PLC", "NE"},
+                {"NANO LABS LTD", "NA"},
+                {"NU HOLDINGS LTD/CAYMAN ISL-A", "NU"},
+                {"NEWPARK RESOURCES INC", "NR"},
+                {"NOVAGOLD RESOURCES INC", "NG"},
+                {"NISOURCE INC", "NI"},
+                {"NACCO INDUSTRIES-CL A", "NC"},
+                {"NL INDUSTRIES", "NL"},
+                {"NVR INC", "NVR"},
+                {"NVENT ELECTRIC PLC", "NVT"},
+                {"NVIDIA CORP", "NVDA"},
+                {"NOVA LTD", "NVMI"},
+                {"UNIVID ASA", "DLTXF"}
+        };
+
+        SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuItem);
+        // Get SearchView autocomplete object.
+        @SuppressLint("RestrictedApi") SearchView.SearchAutoComplete searchAutoComplete = (SearchView.SearchAutoComplete) searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+        // Create a new ArrayAdapter and add data to search auto complete object.
+        ArrayList<String> dataArr = new ArrayList();
+        for (String[] company : companies) {
+            String description = company[0];
+            String symbol = company[1];
+            dataArr.add(symbol + " | " + description);
+        }
+        ArrayAdapter<String> newsAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_dropdown_item_1line, dataArr);
+        searchAutoComplete.setAdapter(newsAdapter);
+
+
         searchView.setQueryHint("Search...");
+
+        if (searchView.isFocused() || searchView.isActivated()) {
+            Toast.makeText(MainActivity.this, "Here",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+
+        searchAutoComplete.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String queryString = (String) parent.getItemAtPosition(position);
+                int index = queryString.indexOf("|");
+                queryString = queryString.substring(0, index).trim();
+                searchAutoComplete.setText("" + queryString);
+                Intent i = new Intent(MainActivity.this, StockDetails.class);
+                bundle.putString("ticker", queryString.toUpperCase());
+                i.putExtras(bundle);
+                startActivity(i);
+
+            }
+        });
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-//               Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
+                System.out.println("This is searched" + query);
                 Intent i = new Intent(MainActivity.this, StockDetails.class);
-                bundle.putString("ticker",query);
+                bundle.putString("ticker", query.toUpperCase());
                 i.putExtras(bundle);
                 startActivity(i);
                 return false;
@@ -481,10 +595,57 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
             @Override
             public boolean onQueryTextChange(String newText) {
+
+                String autocompleteURL = getString(R.string.gcp_url) + "api/stocks/autocomplete/" + newText.toUpperCase();
+                JsonObjectRequest autocompleteRequest = new JsonObjectRequest(Request.Method.GET, autocompleteURL, null, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject jsonObject) {
+                        try {
+                            System.out.println("Autocomplete object" + jsonObject.getJSONArray("result").length());
+                            JSONArray jsonArray = jsonObject.getJSONArray("result");
+
+                            for (int i = 0; i < 5; i++) {
+                                JSONObject obj = jsonArray.getJSONObject(i);
+                                String descrption = obj.getString("description");
+                                String ticker = obj.getString("symbol");
+                                String type = obj.getString("type");
+                                String result = descrption + " | " + ticker;
+                                System.out.println(" Autocomplete result =  " + descrption);
+                                if (!dataArr.contains(descrption)) {
+                                    dataArr.add(descrption);
+                                }
+                                dataArr.add(ticker);
+                                System.out.println(dataArr.size() + "Autocomplete dataArr size");
+                                ArrayAdapter<String> newsAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_dropdown_item_1line, dataArr);
+                                searchAutoComplete.setAdapter(newsAdapter);
+                            }
+
+                        } catch (Exception e) {
+                            System.out.println("In Autocomplete try catch" + e.getLocalizedMessage());
+                        } finally {
+
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError volleyError) {
+                        System.out.println("In autocomplete error" + volleyError.getMessage());
+                    }
+                });
+
+                // requestQueue.add(autocompleteRequest);
+                System.out.println(dataArr + "Autocomplete dataArr");
+
+                searchView.requestFocusFromTouch();
+
+                //searchAutoComplete.notify();
+
                 return false;
             }
         });
-        return super.onCreateOptionsMenu(menu);
+
+        return false;
     }
 
     @Override
@@ -498,5 +659,14 @@ public class MainActivity extends AppCompatActivity implements StockArrowInterfa
 
     @Override
     public void onArrowClick(int position) {
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        getWallet();
+        getPortfolio();
+        getWatchlist();
+
     }
 }
